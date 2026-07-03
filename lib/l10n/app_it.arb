@@ -56,6 +56,8 @@
   "sessionStopConfirmBody": "La sessione verrà salvata nel tuo diario.",
   "sessionStopConfirmAction": "Termina",
   "sessionSimulatedBadge": "Sensing simulato",
+  "sessionForegroundTitle": "Sessione di studio in corso",
+  "sessionForegroundBody": "MindBridge ti accompagna. Tocca per tornare all'app.",
 
   "alertTitle": "Potresti beneficiare di una pausa",
   "alertBody": "Da qualche minuto sembri più teso del solito. Una micro-pausa di pochi minuti può aiutarti a ripartire meglio.",
