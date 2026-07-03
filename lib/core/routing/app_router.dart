@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/pause_types.dart';
+import '../../features/debug/debug_screen.dart';
 import '../../features/diary/diary_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -49,22 +50,9 @@ abstract final class AppRouter {
           ),
       AppRoutes.diary => (_) => const DiaryScreen(),
       AppRoutes.settings => (_) => const SettingsScreen(),
-      _ => (_) => const _UnderConstructionScreen(),
+      AppRoutes.debug => (_) => const DebugScreen(),
+      _ => (_) => const HomeScreen(),
     };
     return MaterialPageRoute<void>(settings: settings, builder: builder);
-  }
-}
-
-/// Segnaposto temporaneo per le route non ancora implementate in Fase 1.
-/// Sparisce man mano che le schermate vengono aggiunte.
-class _UnderConstructionScreen extends StatelessWidget {
-  const _UnderConstructionScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: const Center(child: Icon(Icons.construction)),
-    );
   }
 }
