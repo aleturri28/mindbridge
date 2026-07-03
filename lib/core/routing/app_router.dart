@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../data/pause_types.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/pause/breathing_screen.dart';
+import '../../features/pause/music_screen.dart';
+import '../../features/pause/pause_choice_screen.dart';
+import '../../features/pause/pause_done_screen.dart';
+import '../../features/pause/stretching_screen.dart';
 import '../../features/session/calibration_screen.dart';
 import '../../features/session/session_screen.dart';
 import '../../features/settings/settings_screen.dart';
@@ -31,6 +37,15 @@ abstract final class AppRouter {
       AppRoutes.onboarding => (_) => const OnboardingScreen(),
       AppRoutes.calibration => (_) => const CalibrationScreen(),
       AppRoutes.session => (_) => const SessionScreen(),
+      AppRoutes.pauseChoice => (_) => const PauseChoiceScreen(),
+      AppRoutes.pauseBreathing => (_) => const BreathingScreen(),
+      AppRoutes.pauseStretching => (_) => const StretchingScreen(),
+      AppRoutes.pauseMusic => (_) => const MusicScreen(),
+      AppRoutes.pauseDone => (_) => PauseDoneScreen(
+            kind: settings.arguments is PauseKind
+                ? settings.arguments! as PauseKind
+                : PauseKind.breathing,
+          ),
       AppRoutes.settings => (_) => const SettingsScreen(),
       _ => (_) => const _UnderConstructionScreen(),
     };

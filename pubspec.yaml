@@ -67,6 +67,11 @@ flutter:
   # Genera AppLocalizations dagli arb in lib/l10n (vedi l10n.yaml).
   generate: true
 
+  assets:
+    # Loop ambient generato offline (script, nessun asset di terzi):
+    # musica della pausa rilassante, riprodotto in locale con just_audio.
+    - assets/audio/relax_loop.wav
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
