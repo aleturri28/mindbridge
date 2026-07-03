@@ -1,17 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mindbridge/app.dart';
+import 'package:mindbridge/core/providers.dart';
+import 'package:mindbridge/data/preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('app starts and shows the Phase 0 placeholder', (
+  testWidgets('la home mostra saluto e avvio sessione', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const ProviderScope(child: MindBridgeApp()));
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final Preferences prefs = await Preferences.load();
 
-    expect(find.text('MindBridge'), findsOneWidget);
-    // Semaforo: etichetta testuale sempre presente accanto al colore.
-    expect(find.text('Basso'), findsOneWidget);
-    expect(find.text('Medio'), findsOneWidget);
-    expect(find.text('Alto'), findsOneWidget);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [preferencesProvider.overrideWithValue(prefs)],
+        child: const MindBridgeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ciao!'), findsOneWidget);
+    expect(find.text('AVVIA SESSIONE DI STUDIO'), findsOneWidget);
+    expect(find.text('Diario emotivo'), findsOneWidget);
+    expect(find.text('Impostazioni'), findsOneWidget);
   });
 }
