@@ -6,7 +6,8 @@
       "Bash(git commit -q -m 'feat: add app routes, home and settings screens *)",
       "Bash(git commit -q -m 'feat: add onboarding flow with privacy explanation *)",
       "Bash(python3 -)",
-      "Bash(git commit -q -m 'feat: add session controller, calibration and platform services *)"
+      "Bash(git commit -q -m 'feat: add session controller, calibration and platform services *)",
+      "Bash(git commit -q -m 'feat: add live session screen with stress donut and alert sheet *)"
     ]
   }
 }

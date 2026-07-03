@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/session/calibration_screen.dart';
+import '../../features/session/session_screen.dart';
 import '../../features/settings/settings_screen.dart';
 
 /// Nomi delle route dell'app (riferimento: 17 schermate del medium-fi).
@@ -29,6 +30,7 @@ abstract final class AppRouter {
       AppRoutes.home => (_) => const HomeScreen(),
       AppRoutes.onboarding => (_) => const OnboardingScreen(),
       AppRoutes.calibration => (_) => const CalibrationScreen(),
+      AppRoutes.session => (_) => const SessionScreen(),
       AppRoutes.settings => (_) => const SettingsScreen(),
       _ => (_) => const _UnderConstructionScreen(),
     };
