@@ -1,0 +1,173 @@
+{
+  "@@locale": "it",
+  "appTitle": "MindBridge",
+
+  "stressLow": "Basso",
+  "stressMedium": "Medio",
+  "stressHigh": "Alto",
+
+  "next": "Avanti",
+  "skip": "Salta",
+  "cancel": "Annulla",
+  "confirm": "Conferma",
+
+  "homeGreeting": "Ciao!",
+  "homeSubtitle": "Pronto per una sessione di studio serena?",
+  "homeStartSession": "AVVIA SESSIONE DI STUDIO",
+  "homeDiary": "Diario emotivo",
+  "homeSettings": "Impostazioni",
+  "homeCalibrationNeeded": "Alla prima sessione faremo una breve calibrazione di 60 secondi.",
+
+  "onboarding1Title": "Studia con più serenità",
+  "onboarding1Body": "MindBridge ti accompagna durante lo studio e ti propone piccole pause guidate nei momenti giusti, per aiutarti a mantenere energia e concentrazione.",
+  "onboarding2Title": "Rilevamento passivo, zero distrazioni",
+  "onboarding2Body": "Mentre studi, la fotocamera frontale osserva segnali come postura e tensione del viso. Non devi fare nulla: il telefono resta sul tavolo e tu resti sui libri.",
+  "onboarding3Title": "Tutto resta sul tuo telefono",
+  "onboarding3Body": "Nessun video e nessuna immagine lasciano mai il dispositivo. Salviamo solo dati aggregati, come i livelli delle tue sessioni, per il tuo diario personale.",
+  "onboardingPermissionTitle": "Permesso fotocamera",
+  "onboardingPermissionBody": "Per rilevare i segnali servirà l'accesso alla fotocamera frontale. Le immagini vengono elaborate solo sul dispositivo e mai salvate o inviate. In questa versione dimostrativa il sensing è simulato: potrai concedere il permesso più avanti.",
+  "onboardingStart": "HO CAPITO, INIZIA",
+
+  "calibrationTitle": "Calibrazione",
+  "calibrationIntro": "Per riconoscere i tuoi momenti di tensione, prima impariamo com'è il tuo stato a riposo. Siediti comodo e respira normalmente per un minuto.",
+  "calibrationSignalsTitle": "Cosa rileviamo e perché",
+  "calibrationSignalHr": "Battito stimato dal viso — per notare quando sale rispetto al tuo riposo",
+  "calibrationSignalTension": "Tensione del viso — fronte e mascella si contraggono sotto stress",
+  "calibrationSignalPosture": "Postura — spalle e testa tendono a chiudersi nei momenti di pressione",
+  "calibrationStart": "INIZIA LA CALIBRAZIONE",
+  "calibrationInProgress": "Calibrazione in corso… resta rilassato",
+  "calibrationSecondsLeft": "{seconds} s rimanenti",
+  "@calibrationSecondsLeft": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "calibrationDone": "Calibrazione completata!",
+
+  "sessionTitle": "Sessione in corso",
+  "sessionSuspendedTitle": "Sessione sospesa",
+  "sessionYourState": "Il tuo stato",
+  "sessionSuspend": "Sospendi",
+  "sessionResume": "Riprendi",
+  "sessionStop": "STOP",
+  "sessionStopConfirmTitle": "Terminare la sessione?",
+  "sessionStopConfirmBody": "La sessione verrà salvata nel tuo diario.",
+  "sessionStopConfirmAction": "Termina",
+  "sessionSimulatedBadge": "Sensing simulato",
+
+  "alertTitle": "Potresti beneficiare di una pausa",
+  "alertBody": "Da qualche minuto sembri più teso del solito. Una micro-pausa di pochi minuti può aiutarti a ripartire meglio.",
+  "alertPauseCta": "PAUSA GUIDATA",
+  "alertSnooze": "Posticipa 20 min",
+  "alertIgnore": "Ignora",
+
+  "pauseChoiceTitle": "Scegli la tua pausa",
+  "pauseChoiceSubtitle": "Bastano pochi minuti. Scegli quella che senti più adatta ora.",
+  "pauseBreathingTitle": "Respirazione 4-7-8",
+  "pauseBreathingSubtitle": "Un ritmo guidato che calma corpo e mente",
+  "pauseStretchingTitle": "Stretching guidato",
+  "pauseStretchingSubtitle": "Sciogli collo e spalle senza alzarti",
+  "pauseMusicTitle": "Musica rilassante",
+  "pauseMusicSubtitle": "Chiudi gli occhi e lascia andare la tensione",
+  "pauseStart": "INIZIA",
+
+  "breathingIn": "Inspira",
+  "breathingHold": "Trattieni",
+  "breathingOut": "Espira",
+  "breathingCycle": "Ciclo {current} di {total}",
+  "@breathingCycle": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "breathingGetReady": "Mettiti comodo…",
+
+  "stretchingStep": "Esercizio {current} di {total}",
+  "@stretchingStep": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "stretchingNeckTitle": "Collo",
+  "stretchingNeckBody": "Inclina lentamente la testa verso la spalla destra, poi verso la sinistra. Respira con calma.",
+  "stretchingShouldersTitle": "Spalle",
+  "stretchingShouldersBody": "Solleva le spalle verso le orecchie, tienile un attimo, poi lasciale cadere. Ripeti dolcemente.",
+  "stretchingBackTitle": "Schiena",
+  "stretchingBackBody": "Intreccia le dita e allunga le braccia in avanti, arrotondando la parte alta della schiena.",
+  "stretchingWristsTitle": "Polsi",
+  "stretchingWristsBody": "Ruota lentamente i polsi in un senso e nell'altro, poi apri e chiudi le mani.",
+
+  "musicTitle": "Musica rilassante",
+  "musicSubtitle": "Chiudi gli occhi, oppure guarda lontano dallo schermo.",
+  "musicStop": "Termina la pausa",
+
+  "pauseDoneTitle": "Pausa completata!",
+  "pauseDoneBody": "Ben fatto. Riprendi da dove avevi lasciato, con un po' più di leggerezza.",
+  "pauseDoneResume": "RIPRENDI LO STUDIO",
+
+  "diaryTitle": "Diario emotivo",
+  "diaryWeek": "La tua settimana",
+  "diaryLegend": "Distribuzione dei livelli durante le sessioni",
+  "diaryRecentSessions": "Sessioni recenti",
+  "diaryEmpty": "Ancora nessuna sessione. Avvia la prima dalla schermata principale!",
+  "diarySessionDuration": "{minutes} min",
+  "@diarySessionDuration": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryPausesTaken": "{count, plural, =0{Nessuna pausa} =1{1 pausa} other{{count} pause}}",
+  "@diaryPausesTaken": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryInsightPauses": "Questa settimana hai accettato {accepted} pause su {proposed} proposte.",
+  "@diaryInsightPauses": {
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "proposed": {
+        "type": "int"
+      }
+    }
+  },
+  "diaryInsightCalmWeek": "Settimana tranquilla: i momenti di tensione sono stati pochi. Continua così!",
+  "diaryInsightTenseWeek": "Alcune sessioni sono state più intense: le micro-pause possono aiutarti a scaricare la tensione.",
+
+  "settingsTitle": "Impostazioni",
+  "settingsNotifications": "Notifiche",
+  "settingsNotificationMode": "Tipo di avviso",
+  "settingsNotificationVibration": "Vibrazione (consigliato)",
+  "settingsNotificationSound": "Suono",
+  "settingsNotificationSilent": "Silenziosa",
+  "settingsLibraryMode": "Modalità biblioteca",
+  "settingsLibraryModeSubtitle": "Solo vibrazione discreta, mai suoni",
+  "settingsPrivacy": "Privacy",
+  "settingsOnDevice": "Elaborazione solo sul dispositivo",
+  "settingsOnDeviceSubtitle": "Sempre attiva: nessun video o dato biometrico lascia mai il telefono. Non è disattivabile perché è una garanzia, non un'opzione.",
+  "settingsData": "I tuoi dati",
+  "settingsRecalibrate": "Ripeti la calibrazione",
+  "settingsDeleteData": "Cancella tutti i dati",
+  "settingsDeleteDataConfirmTitle": "Cancellare tutto?",
+  "settingsDeleteDataConfirmBody": "Sessioni, diario e calibrazione verranno eliminati definitivamente da questo dispositivo.",
+  "settingsDeleteDataConfirmAction": "Cancella",
+  "settingsDataDeleted": "Dati cancellati."
+}
