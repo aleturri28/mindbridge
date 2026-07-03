@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/pause_types.dart';
+import '../../features/diary/diary_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pause/breathing_screen.dart';
@@ -46,6 +47,7 @@ abstract final class AppRouter {
                 ? settings.arguments! as PauseKind
                 : PauseKind.breathing,
           ),
+      AppRoutes.diary => (_) => const DiaryScreen(),
       AppRoutes.settings => (_) => const SettingsScreen(),
       _ => (_) => const _UnderConstructionScreen(),
     };

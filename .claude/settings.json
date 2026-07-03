@@ -8,7 +8,8 @@
       "Bash(python3 -)",
       "Bash(git commit -q -m 'feat: add session controller, calibration and platform services *)",
       "Bash(git commit -q -m 'feat: add live session screen with stress donut and alert sheet *)",
-      "Bash(git commit -q -m 'feat: add guided pause flows \\(breathing, stretching, music\\) *)"
+      "Bash(git commit -q -m 'feat: add guided pause flows \\(breathing, stretching, music\\) *)",
+      "Bash(git commit -q -m 'feat: add emotional diary with custom bar charts *)"
     ]
   }
 }
