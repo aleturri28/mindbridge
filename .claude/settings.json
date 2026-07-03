@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dart run *)",
       "Bash(git commit -q -m 'feat: add drift persistence and preferences *)",
-      "Bash(git commit -q -m 'feat: add app routes, home and settings screens *)"
+      "Bash(git commit -q -m 'feat: add app routes, home and settings screens *)",
+      "Bash(git commit -q -m 'feat: add onboarding flow with privacy explanation *)"
     ]
   }
 }

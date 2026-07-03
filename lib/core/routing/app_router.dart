@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/home/home_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/settings/settings_screen.dart';
 
 /// Nomi delle route dell'app (riferimento: 17 schermate del medium-fi).
@@ -25,6 +26,7 @@ abstract final class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     final WidgetBuilder builder = switch (settings.name) {
       AppRoutes.home => (_) => const HomeScreen(),
+      AppRoutes.onboarding => (_) => const OnboardingScreen(),
       AppRoutes.settings => (_) => const SettingsScreen(),
       _ => (_) => const _UnderConstructionScreen(),
     };
