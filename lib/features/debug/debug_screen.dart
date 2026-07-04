@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../core/routing/app_router.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../sensing/sensing_sample.dart';
 import '../../sensing/simulated_sensing_source.dart';
@@ -70,9 +72,20 @@ class _DebugScreenState extends ConsumerState<DebugScreen> {
             value: true,
             onChanged: null,
             title: const Text('Sorgente simulata'),
-            subtitle:
-                const Text('CameraSensingSource arriva in Fase 2'),
+            subtitle: const Text(
+              'Lo switch sim/reale per la sessione arriva in Fase 4',
+            ),
           ),
+          if (defaultTargetPlatform == TargetPlatform.android)
+            ListTile(
+              title: const Text('Sensing camera (Fase 2)'),
+              subtitle: const Text(
+                'Preview + landmark MediaPipe + metriche grezze',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.debugSensing),
+            ),
           const Divider(),
           ListTile(
             title: const Text('Stato sessione'),

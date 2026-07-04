@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/pause_types.dart';
 import '../../features/debug/debug_screen.dart';
+import '../../features/debug/sensing_debug_screen.dart';
 import '../../features/diary/diary_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -28,6 +29,7 @@ abstract final class AppRoutes {
   static const String diary = '/diary';
   static const String settings = '/settings';
   static const String debug = '/debug';
+  static const String debugSensing = '/debug/sensing';
 }
 
 /// Route table centralizzata (Navigator 1.0 con route nominate: nessuna
@@ -51,6 +53,7 @@ abstract final class AppRouter {
       AppRoutes.diary => (_) => const DiaryScreen(),
       AppRoutes.settings => (_) => const SettingsScreen(),
       AppRoutes.debug => (_) => const DebugScreen(),
+      AppRoutes.debugSensing => (_) => const SensingDebugScreen(),
       _ => (_) => const HomeScreen(),
     };
     return MaterialPageRoute<void>(settings: settings, builder: builder);
