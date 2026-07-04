@@ -48,4 +48,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // MediaPipe Tasks: Face/Pose Landmarker on-device (NFR1: nessuna rete).
+    implementation("com.google.mediapipe:tasks-vision:0.10.26.1")
 }

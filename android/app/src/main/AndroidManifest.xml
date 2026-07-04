@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Fase 2: sensing passivo via camera frontale. I frame restano
+         on-device e in-process; nessun permesso di rete (NFR1/NFR2). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
 
     <application
         android:label="MindBridge"
