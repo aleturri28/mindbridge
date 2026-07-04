@@ -46,3 +46,12 @@ app.*.map.json
 
 # Generated localizations (flutter gen-l10n)
 lib/l10n/gen/
+
+# Local Claude/agent tooling
+.claude/CLAUDE.md
+.claude/skills/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Generated graphify reports and caches
+graphify-out/
