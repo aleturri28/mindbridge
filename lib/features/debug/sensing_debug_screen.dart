@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../sensing/camera/camera_sensing_source.dart';
 import '../../sensing/camera/sensing_api.g.dart';
+import '../../sensing/rppg/rppg_config.dart';
 import '../../sensing/sensing_sample.dart';
 
 /// Debug screen Fase 2 (nascosta, solo dal menu debug): preview camera con
@@ -101,6 +102,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                               CustomPaint(
                                 painter: _LandmarkPainter(analysis: a),
                               ),
+                            if (a != null && a.faceDetected)
+                              CustomPaint(
+                                painter: _RoiPainter(faceLandmarks: a.faceLandmarks),
+                              ),
                           ],
                         ),
                       ),
@@ -118,14 +123,14 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                       ),
                     ),
                     ListTile(
-                      title: const Text('Metriche derivate (EMA)'),
+                      title: const Text('Metriche derivate'),
                       subtitle: Text(
                         s == null
                             ? 'nessun campione ancora'
                             : 'tensione: ${s.facialTension.toStringAsFixed(2)} '
                                 '· postura: ${s.postureScore.toStringAsFixed(2)}\n'
-                                'hr: ${s.hr?.toStringAsFixed(1) ?? '— (Fase 3)'} '
-                                '· quality: ${s.hrQuality.toStringAsFixed(2)}',
+                                'hr: ${s.hr?.toStringAsFixed(1) ?? (s.hrQuality > 0 ? 'segnale instabile' : 'in attesa')} '
+                                'bpm · quality: ${s.hrQuality.toStringAsFixed(2)}',
                       ),
                     ),
                     if (a != null && a.blendshapes.isNotEmpty)
@@ -184,4 +189,46 @@ class _LandmarkPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LandmarkPainter oldDelegate) =>
       oldDelegate.analysis != analysis;
+}
+
+/// Disegna i poligoni ROI (fronte + guance) usati dal CHROM, per verifica
+/// visiva durante la validazione manuale (§5 del design doc Fase 3).
+class _RoiPainter extends CustomPainter {
+  _RoiPainter({required this.faceLandmarks});
+
+  final List<double> faceLandmarks;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint fill = Paint()
+      ..color = AppColors.stressLow.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    for (final List<int> indices in <List<int>>[
+      RppgConfig.foreheadIndices,
+      RppgConfig.leftCheekIndices,
+      RppgConfig.rightCheekIndices,
+    ]) {
+      final Path path = Path();
+      for (int i = 0; i < indices.length; i++) {
+        final int xi = indices[i] * 2;
+        if (xi + 1 >= faceLandmarks.length) {
+          return;
+        }
+        final double x = (1 - faceLandmarks[xi]) * size.width;
+        final double y = faceLandmarks[xi + 1] * size.height;
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      path.close();
+      canvas.drawPath(path, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RoiPainter oldDelegate) =>
+      oldDelegate.faceLandmarks != faceLandmarks;
 }
