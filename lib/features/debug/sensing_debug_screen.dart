@@ -193,6 +193,14 @@ class _LandmarkPainter extends CustomPainter {
 
 /// Disegna i poligoni ROI (fronte + guance) usati dal CHROM, per verifica
 /// visiva durante la validazione manuale (§5 del design doc Fase 3).
+///
+/// I landmark arrivano già in spazio upright (MediaPipe li ruota via
+/// rotationDegrees in Fase 2), quindi qui basta lo specchiamento x
+/// `(1 - x)` sopra la `CameraPreview` — stessa convenzione di
+/// [_LandmarkPainter]. `RoiExtractor.meansForRoi` campiona lo STESSO volto
+/// ma nel buffer YUV grezzo (non ruotato), perciò de-ruota gli stessi
+/// landmark con `rawNormalizedFromUpright`: overlay ed estrazione
+/// indicano la medesima regione, ciascuno nel proprio spazio di coordinate.
 class _RoiPainter extends CustomPainter {
   _RoiPainter({required this.faceLandmarks});
 

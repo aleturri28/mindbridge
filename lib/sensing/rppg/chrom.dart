@@ -64,7 +64,10 @@ ChromResult? estimateHeartRate(List<ChromSample> samples) {
   final double meanG = _mean(gs);
   final double meanB = _mean(bs);
   if (meanR == 0 || meanG == 0 || meanB == 0) {
-    return const ChromResult(hrBpm: 0, quality: 0);
+    // Segnale degenere (canale a media nulla): nessuna stima, coerente con
+    // gli altri percorsi «nessun segnale» che ritornano null (mai un bpm
+    // fabbricato — NFR3).
+    return null;
   }
 
   final int n = samples.length;

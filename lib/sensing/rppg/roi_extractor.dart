@@ -141,6 +141,11 @@ RoiColorMeans meansForRoi({
 
   double sumR = 0, sumG = 0, sumB = 0;
   int count = 0;
+  // Assunzione 4:2:0: il piano crominanza è sottocampionato 2x2, quindi
+  // (uvRow, uvCol) = (row >> 1, col >> 1). Vale per lo YUV420 di Android
+  // (l'unico che raggiunge questo path). uvRowStride/uvPixelStride gestiscono
+  // sia il layout planare sia il semi-planare; la porzione BGRA iOS non passa
+  // di qui (Fase 5 fornirà un YuvFrame equivalente).
   for (int row = minRow; row <= maxRow; row++) {
     final double v = (row + 0.5) / frame.height;
     final int uvRow = row >> 1;
