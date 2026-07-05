@@ -91,5 +91,41 @@ void main() {
       expect(s.hr, isNull);
       expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold - 0.1, 1e-9));
     });
+
+    test('stale estimate is expired: hr forced null, quality forced 0', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      final DateTime receivedAt = DateTime(2026);
+      agg.updateHr(
+        const RppgEstimate(
+          hrBpm: 72,
+          quality: RppgConfig.qualityThreshold + 0.1,
+          timestampMs: 0,
+        ),
+        now: receivedAt,
+      );
+      final DateTime staleNow =
+          receivedAt.add(RppgConfig.estimateStaleAfter + const Duration(seconds: 1));
+      final SensingSample s = agg.snapshot(staleNow);
+      expect(s.hr, isNull);
+      expect(s.hrQuality, 0);
+    });
+
+    test('fresh estimate within staleness window still surfaces hr', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      final DateTime receivedAt = DateTime(2026);
+      agg.updateHr(
+        const RppgEstimate(
+          hrBpm: 72,
+          quality: RppgConfig.qualityThreshold + 0.1,
+          timestampMs: 0,
+        ),
+        now: receivedAt,
+      );
+      final DateTime freshNow =
+          receivedAt.add(RppgConfig.estimateStaleAfter - const Duration(seconds: 1));
+      final SensingSample s = agg.snapshot(freshNow);
+      expect(s.hr, 72);
+      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold + 0.1, 1e-9));
+    });
   });
 }

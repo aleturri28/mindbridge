@@ -30,4 +30,11 @@ abstract final class RppgConfig {
 
   /// Campioni minimi in finestra prima di tentare una stima.
   static const int minSamplesForEstimate = 30;
+
+  /// Oltre questa durata senza una nuova stima HR (o senza volto rilevato),
+  /// il segnale è considerato stale: quality forzata a 0 e hr mai mostrato
+  /// come numero (mai fabbricare un valore — NFR3/NFR10). 5s equivalgono a
+  /// 5 hop mancati, ben oltre qualsiasi cadenza sana, ma abbastanza breve da
+  /// degradare onestamente in tempi rapidi.
+  static const Duration estimateStaleAfter = Duration(seconds: 5);
 }

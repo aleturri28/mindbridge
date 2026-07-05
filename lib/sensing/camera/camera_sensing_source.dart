@@ -24,6 +24,7 @@ class VisualSampleAggregator {
   double _posture = VisualMetricsConfig.restPosture;
   double? _hr;
   double _hrQuality = 0;
+  DateTime? _hrReceivedAt;
 
   void add(FrameAnalysis analysis) {
     final double tension = facialTensionFromBlendshapes(analysis.blendshapes);
@@ -35,21 +36,28 @@ class VisualSampleAggregator {
   /// Aggiorna l'HR dall'ultima stima CHROM. Sotto soglia di qualità l'HR
   /// resta nascosto (mai inventare un valore — NFR3/NFR10), ma la qualità
   /// vera viene comunque riportata così la debug screen mostra il degrado
-  /// onestamente.
-  void updateHr(RppgEstimate estimate) {
+  /// onestamente. [now] è iniettabile per i test; di default l'orario reale.
+  void updateHr(RppgEstimate estimate, {DateTime? now}) {
     _hrQuality = estimate.quality;
     _hr = estimate.quality >= RppgConfig.qualityThreshold ? estimate.hrBpm : null;
+    _hrReceivedAt = now ?? DateTime.now();
   }
 
   double _ema(double previous, double next) =>
       previous + alpha * (next - previous);
 
   /// Campione corrente. hr/hrQuality restano vuoti finché l'rPPG non
-  /// arriva (Fase 3): mai inventare valori (NFR3).
+  /// arriva (Fase 3): mai inventare valori (NFR3). Se non è mai arrivata
+  /// una stima, o l'ultima è più vecchia di [RppgConfig.estimateStaleAfter]
+  /// (volto perso o isolate bloccato), l'HR viene forzato a nascosto e la
+  /// qualità a 0: mai riportare come "corrente" un valore ormai stale.
   SensingSample snapshot(DateTime now) {
+    final DateTime? receivedAt = _hrReceivedAt;
+    final bool stale = receivedAt == null ||
+        now.difference(receivedAt) > RppgConfig.estimateStaleAfter;
     return SensingSample(
-      hr: _hr,
-      hrQuality: _hrQuality,
+      hr: stale ? null : _hr,
+      hrQuality: stale ? 0 : _hrQuality,
       facialTension: _tension,
       postureScore: _posture,
       timestamp: now,
@@ -92,6 +100,13 @@ class CameraSensingSource implements SensingSource {
   /// Ultimi landmark facciali noti (spazio "upright" MediaPipe), usati per
   /// la ROI rPPG sui frame intermedi non passati al canale Pigeon.
   List<double> _lastFaceLandmarks = const <double>[];
+
+  /// Istante dell'ultima [FrameAnalysis] con volto rilevato. Le analisi
+  /// transitorie senza volto NON svuotano [_lastFaceLandmarks] (di proposito:
+  /// tollera perdite momentanee di tracking), ma un'assenza prolungata oltre
+  /// [RppgConfig.estimateStaleAfter] rende il poligono cache stale — va
+  /// ignorato invece di continuare a campionare una ROI ormai non valida.
+  DateTime? _lastFaceSeenAt;
 
   @override
   Stream<SensingSample> get signals => _samples.stream;
@@ -152,7 +167,10 @@ class CameraSensingSource implements SensingSource {
   /// [_analyze]. Costo O(pixel ROI), non full-frame.
   void _extractRoiColor(CameraImage image) {
     final RppgProcessor? processor = _rppgProcessor;
-    if (processor == null || _lastFaceLandmarks.isEmpty) {
+    final DateTime? lastSeen = _lastFaceSeenAt;
+    final bool cacheStale = lastSeen == null ||
+        DateTime.now().difference(lastSeen) > RppgConfig.estimateStaleAfter;
+    if (processor == null || _lastFaceLandmarks.isEmpty || cacheStale) {
       return;
     }
     final YuvFrame frame = YuvFrame(
@@ -201,6 +219,7 @@ class CameraSensingSource implements SensingSource {
         _aggregator.add(analysis);
         if (analysis.faceDetected) {
           _lastFaceLandmarks = analysis.faceLandmarks;
+          _lastFaceSeenAt = now;
         }
         if (!_analyses.isClosed) {
           _analyses.add(analysis);
@@ -222,6 +241,7 @@ class CameraSensingSource implements SensingSource {
     await _rppgProcessor?.dispose();
     _rppgProcessor = null;
     _lastFaceLandmarks = const <double>[];
+    _lastFaceSeenAt = null;
     final CameraController? controller = _controller;
     _controller = null;
     if (controller != null) {
