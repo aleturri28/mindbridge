@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mindbridge/sensing/camera/camera_sensing_source.dart';
 import 'package:mindbridge/sensing/camera/sensing_api.g.dart';
 import 'package:mindbridge/sensing/camera/visual_metrics.dart';
+import 'package:mindbridge/sensing/rppg/rppg_config.dart';
+import 'package:mindbridge/sensing/rppg/rppg_isolate.dart';
 import 'package:mindbridge/sensing/sensing_sample.dart';
 
 FrameAnalysis analysis({
@@ -62,6 +64,32 @@ void main() {
       final double tension = agg.snapshot(DateTime(2026)).facialTension;
       // Solo browDown pesato 0.5 → converge verso 0.4.
       expect(tension, closeTo(0.4, 0.05));
+    });
+  });
+
+  group('VisualSampleAggregator.updateHr', () {
+    test('quality at or above threshold surfaces hr', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      agg.updateHr(const RppgEstimate(
+        hrBpm: 72,
+        quality: RppgConfig.qualityThreshold + 0.1,
+        timestampMs: 0,
+      ));
+      final SensingSample s = agg.snapshot(DateTime(2026));
+      expect(s.hr, 72);
+      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold + 0.1, 1e-9));
+    });
+
+    test('quality below threshold hides hr but still reports quality', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      agg.updateHr(const RppgEstimate(
+        hrBpm: 72,
+        quality: RppgConfig.qualityThreshold - 0.1,
+        timestampMs: 0,
+      ));
+      final SensingSample s = agg.snapshot(DateTime(2026));
+      expect(s.hr, isNull);
+      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold - 0.1, 1e-9));
     });
   });
 }

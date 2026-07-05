@@ -4,6 +4,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../rppg/roi_extractor.dart';
+import '../rppg/rppg_config.dart';
+import '../rppg/rppg_isolate.dart';
 import '../sensing_sample.dart';
 import '../sensing_source.dart';
 import 'sensing_api.g.dart';
@@ -19,12 +22,23 @@ class VisualSampleAggregator {
 
   double _tension = VisualMetricsConfig.restTension;
   double _posture = VisualMetricsConfig.restPosture;
+  double? _hr;
+  double _hrQuality = 0;
 
   void add(FrameAnalysis analysis) {
     final double tension = facialTensionFromBlendshapes(analysis.blendshapes);
     final double posture = postureScoreFromPose(analysis.poseLandmarks);
     _tension = _ema(_tension, tension);
     _posture = _ema(_posture, posture);
+  }
+
+  /// Aggiorna l'HR dall'ultima stima CHROM. Sotto soglia di qualità l'HR
+  /// resta nascosto (mai inventare un valore — NFR3/NFR10), ma la qualità
+  /// vera viene comunque riportata così la debug screen mostra il degrado
+  /// onestamente.
+  void updateHr(RppgEstimate estimate) {
+    _hrQuality = estimate.quality;
+    _hr = estimate.quality >= RppgConfig.qualityThreshold ? estimate.hrBpm : null;
   }
 
   double _ema(double previous, double next) =>
@@ -34,8 +48,8 @@ class VisualSampleAggregator {
   /// arriva (Fase 3): mai inventare valori (NFR3).
   SensingSample snapshot(DateTime now) {
     return SensingSample(
-      hr: null,
-      hrQuality: 0,
+      hr: _hr,
+      hrQuality: _hrQuality,
       facialTension: _tension,
       postureScore: _posture,
       timestamp: now,
@@ -43,9 +57,10 @@ class VisualSampleAggregator {
   }
 }
 
-/// Sorgente reale (Fase 2, Android): camera frontale a bassa risoluzione →
-/// canale Pigeon → MediaPipe nativo → metriche visive. hr arriva in Fase 3.
-/// I frame non lasciano mai il processo (NFR1/NFR2).
+/// Sorgente reale (Fase 2+3, Android): camera frontale a bassa risoluzione →
+/// canale Pigeon → MediaPipe nativo → metriche visive, più estrazione ROI
+/// per rPPG su ogni frame nativo. I frame non lasciano mai il processo
+/// (NFR1/NFR2).
 class CameraSensingSource implements SensingSource {
   CameraSensingSource({
     SensingHostApi? hostApi,
@@ -68,9 +83,15 @@ class CameraSensingSource implements SensingSource {
 
   CameraController? _controller;
   Timer? _sampleTimer;
+  RppgProcessor? _rppgProcessor;
+  StreamSubscription<RppgEstimate>? _rppgSub;
   bool _analyzing = false;
   DateTime _lastFrameAt = DateTime.fromMillisecondsSinceEpoch(0);
   int _sensorOrientation = 270;
+
+  /// Ultimi landmark facciali noti (spazio "upright" MediaPipe), usati per
+  /// la ROI rPPG sui frame intermedi non passati al canale Pigeon.
+  List<double> _lastFaceLandmarks = const <double>[];
 
   @override
   Stream<SensingSample> get signals => _samples.stream;
@@ -87,6 +108,8 @@ class CameraSensingSource implements SensingSource {
       return;
     }
     await _hostApi.initialize();
+    _rppgProcessor = await RppgProcessor.spawn();
+    _rppgSub = _rppgProcessor!.estimates.listen(_aggregator.updateHr);
 
     final List<CameraDescription> cameras = await availableCameras();
     final CameraDescription front = cameras.firstWhere(
@@ -113,6 +136,8 @@ class CameraSensingSource implements SensingSource {
   }
 
   void _onFrame(CameraImage image) {
+    _extractRoiColor(image);
+
     final DateTime now = DateTime.now();
     if (_analyzing || now.difference(_lastFrameAt) < minFrameInterval) {
       return;
@@ -120,6 +145,40 @@ class CameraSensingSource implements SensingSource {
     _analyzing = true;
     _lastFrameAt = now;
     unawaited(_analyze(image, now));
+  }
+
+  /// Estrazione ROI ad ogni frame nativo (non throttled come l'analisi
+  /// landmark): la ROI riusa l'ultimo poligono noto, aggiornato in
+  /// [_analyze]. Costo O(pixel ROI), non full-frame.
+  void _extractRoiColor(CameraImage image) {
+    final RppgProcessor? processor = _rppgProcessor;
+    if (processor == null || _lastFaceLandmarks.isEmpty) {
+      return;
+    }
+    final YuvFrame frame = YuvFrame(
+      width: image.width,
+      height: image.height,
+      yPlane: image.planes[0].bytes,
+      uPlane: image.planes[1].bytes,
+      vPlane: image.planes[2].bytes,
+      yRowStride: image.planes[0].bytesPerRow,
+      uvRowStride: image.planes[1].bytesPerRow,
+      uvPixelStride: image.planes[1].bytesPerPixel ?? 1,
+    );
+    final RoiColorMeans means = meansForRoi(
+      frame: frame,
+      faceLandmarksFlat: _lastFaceLandmarks,
+      rotationDegrees: _sensorOrientation,
+    );
+    if (means.pixelCount == 0) {
+      return;
+    }
+    processor.addFrame(
+      r: means.r,
+      g: means.g,
+      b: means.b,
+      timestampMs: DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   Future<void> _analyze(CameraImage image, DateTime now) async {
@@ -140,6 +199,9 @@ class CameraSensingSource implements SensingSource {
       );
       if (analysis != null) {
         _aggregator.add(analysis);
+        if (analysis.faceDetected) {
+          _lastFaceLandmarks = analysis.faceLandmarks;
+        }
         if (!_analyses.isClosed) {
           _analyses.add(analysis);
         }
@@ -155,6 +217,11 @@ class CameraSensingSource implements SensingSource {
   Future<void> stop() async {
     _sampleTimer?.cancel();
     _sampleTimer = null;
+    await _rppgSub?.cancel();
+    _rppgSub = null;
+    await _rppgProcessor?.dispose();
+    _rppgProcessor = null;
+    _lastFaceLandmarks = const <double>[];
     final CameraController? controller = _controller;
     _controller = null;
     if (controller != null) {
