@@ -163,9 +163,13 @@ class CameraSensingSource implements SensingSource {
     );
     _sensorOrientation = front.sensorOrientation;
 
+    // ResolutionPreset.medium (non low): più pixel nella ROI fronte/guance
+    // → il rumore di quantizzazione si media meglio (∝ 1/√N) → SNR del polso
+    // più alto, quality rPPG più alta e meno picchi spuri. Costo CPU/batteria
+    // contenuto; l'analisi landmark resta throttled a ~5fps.
     final CameraController controller = CameraController(
       front,
-      ResolutionPreset.low,
+      ResolutionPreset.medium,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.yuv420,
     );
