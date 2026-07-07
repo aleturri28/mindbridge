@@ -1,5 +1,26 @@
 # Decisioni di progetto
 
+## Fase 3 (seguito) — Passaggio a POS come algoritmo attivo
+
+- **POS (Wang et al. 2017) sostituisce CHROM nella pipeline attiva**
+  (`RppgWindow` → `estimateHeartRatePos`). Motivo: nella validazione manuale
+  su device (Task 7) CHROM produceva quality 0.10–0.25 e bpm instabile
+  (±15 quando andava bene) — SNR del polso basso a `ResolutionPreset.low`.
+  Il debugging sistematico ha escluso: ROI fuori pelle (overlay corretto),
+  stallo pipeline (3434 frame → 130 stime), detrend mancante (CHROM cancella
+  la deriva common-mode per costruzione — test di regressione aggiunto).
+  POS è l'alternativa sanzionata da CLAUDE.md («CHROM, in alternativa POS»),
+  più robusta al movimento.
+- **CHROM resta nel codebase, testato**, come alternativa documentata: lo
+  scan spettrale condiviso vive in `spectral.dart`, entrambi gli algoritmi
+  lo riusano. Tornare a CHROM = una riga in `rppg_window.dart`.
+- **Limite dichiarato che resta:** il rumore di quantizzazione da bassa
+  risoluzione non si risolve cambiando algoritmo. Se POS non basta per il
+  DoD ±10 bpm, prossima leva: `ResolutionPreset.low → medium` (4x pixel ROI)
+  e/o finestra 10s → 15s, poi rivalidare. In ogni caso l'app degrada
+  onestamente (hr null sotto soglia — NFR3), quindi un rPPG marginale non
+  compromette il flusso utente.
+
 ## Fase 3 — rPPG condiviso (CHROM)
 
 - **rPPG interamente in Dart puro condiviso** (`lib/sensing/rppg/`): nessun
