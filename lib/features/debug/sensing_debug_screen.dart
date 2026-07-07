@@ -8,6 +8,7 @@ import '../../core/theme/app_tokens.dart';
 import '../../sensing/camera/camera_sensing_source.dart';
 import '../../sensing/camera/sensing_api.g.dart';
 import '../../sensing/rppg/rppg_config.dart';
+import '../../sensing/rppg/rppg_window.dart' show RppgEstimate;
 import '../../sensing/sensing_sample.dart';
 
 /// Debug screen Fase 2 (nascosta, solo dal menu debug): preview camera con
@@ -29,8 +30,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
   String? _error;
   DateTime? _lastFrameTime;
   double _fps = 0;
+  RppgEstimate? _lastRawEstimate;
   StreamSubscription<FrameAnalysis>? _analysisSub;
   StreamSubscription<SensingSample>? _sampleSub;
+  StreamSubscription<RppgEstimate>? _rawSub;
 
   @override
   void initState() {
@@ -51,6 +54,8 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
     });
     _sampleSub = _source.signals
         .listen((SensingSample s) => setState(() => _lastSample = s));
+    _rawSub = _source.rawEstimates
+        .listen((RppgEstimate e) => setState(() => _lastRawEstimate = e));
     unawaited(_start());
   }
 
@@ -71,6 +76,7 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
   void dispose() {
     unawaited(_analysisSub?.cancel());
     unawaited(_sampleSub?.cancel());
+    unawaited(_rawSub?.cancel());
     _source.dispose();
     super.dispose();
   }
@@ -131,6 +137,18 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                                 '· postura: ${s.postureScore.toStringAsFixed(2)}\n'
                                 'hr: ${s.hr?.toStringAsFixed(1) ?? (s.hrQuality > 0 ? 'segnale instabile' : 'in attesa')} '
                                 'bpm · quality: ${s.hrQuality.toStringAsFixed(2)}',
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('rPPG grezzo (diagnostica, non gated)'),
+                      subtitle: Text(
+                        _lastRawEstimate == null
+                            ? 'nessuna stima ancora (serve ~10s di finestra)'
+                            : 'bpm calcolato: '
+                                '${_lastRawEstimate!.hrBpm.toStringAsFixed(1)}\n'
+                                'quality: '
+                                '${_lastRawEstimate!.quality.toStringAsFixed(3)} '
+                                '(soglia ${RppgConfig.qualityThreshold})',
                       ),
                     ),
                     if (a != null && a.blendshapes.isNotEmpty)

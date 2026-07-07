@@ -89,6 +89,12 @@ class CameraSensingSource implements SensingSource {
   final StreamController<FrameAnalysis> _analyses =
       StreamController<FrameAnalysis>.broadcast();
 
+  /// Stime rPPG grezze inoltrate per la debug screen (validazione manuale).
+  /// Controller stabile, sottoscrivibile prima di [start] (a differenza dello
+  /// stream del processor, che nasce solo allo spawn).
+  final StreamController<RppgEstimate> _rawEstimates =
+      StreamController<RppgEstimate>.broadcast();
+
   CameraController? _controller;
   Timer? _sampleTimer;
   RppgProcessor? _rppgProcessor;
@@ -114,6 +120,12 @@ class CameraSensingSource implements SensingSource {
   /// Analisi grezze per la debug screen (overlay landmark, FPS).
   Stream<FrameAnalysis> get analyses => _analyses.stream;
 
+  /// Stime rPPG grezze (NON gated da qualità/staleness): solo per la debug
+  /// screen, per confrontare il bpm calcolato col riferimento durante la
+  /// validazione manuale. Il flusso utente usa sempre [signals], dove hr è
+  /// null finché non è affidabile (NFR3).
+  Stream<RppgEstimate> get rawEstimates => _rawEstimates.stream;
+
   /// Controller esposto per `CameraPreview` nella debug screen.
   CameraController? get controller => _controller;
 
@@ -124,7 +136,12 @@ class CameraSensingSource implements SensingSource {
     }
     await _hostApi.initialize();
     _rppgProcessor = await RppgProcessor.spawn();
-    _rppgSub = _rppgProcessor!.estimates.listen(_aggregator.updateHr);
+    _rppgSub = _rppgProcessor!.estimates.listen((RppgEstimate estimate) {
+      _aggregator.updateHr(estimate);
+      if (!_rawEstimates.isClosed) {
+        _rawEstimates.add(estimate);
+      }
+    });
 
     final List<CameraDescription> cameras = await availableCameras();
     final CameraDescription front = cameras.firstWhere(
@@ -258,5 +275,6 @@ class CameraSensingSource implements SensingSource {
     unawaited(stop());
     unawaited(_samples.close());
     unawaited(_analyses.close());
+    unawaited(_rawEstimates.close());
   }
 }
