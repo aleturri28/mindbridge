@@ -1,4 +1,5 @@
 import 'chrom.dart';
+import 'pos.dart';
 import 'rppg_config.dart';
 
 /// Stima HR pubblica: bpm + qualità + timestamp della stima.
@@ -41,7 +42,9 @@ class RppgWindow {
     if (last != null && nowMs - last < hopDuration.inMilliseconds) {
       return null;
     }
-    final ChromResult? result = estimateHeartRate(_buffer);
+    // POS è l'algoritmo attivo (più robusto al movimento); CHROM resta
+    // disponibile e testato in chrom.dart come alternativa.
+    final ChromResult? result = estimateHeartRatePos(_buffer);
     if (result == null) {
       return null;
     }
