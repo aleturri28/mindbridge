@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_tokens.dart';
 import '../../sensing/camera/camera_sensing_source.dart';
 import '../../sensing/camera/sensing_api.g.dart';
+import '../../sensing/rppg/rppg_config.dart';
+import '../../sensing/rppg/rppg_window.dart' show RppgEstimate;
 import '../../sensing/sensing_sample.dart';
 
 /// Debug screen Fase 2 (nascosta, solo dal menu debug): preview camera con
@@ -28,8 +30,11 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
   String? _error;
   DateTime? _lastFrameTime;
   double _fps = 0;
+  RppgEstimate? _lastRawEstimate;
+  int _rawEstimateCount = 0;
   StreamSubscription<FrameAnalysis>? _analysisSub;
   StreamSubscription<SensingSample>? _sampleSub;
+  StreamSubscription<RppgEstimate>? _rawSub;
 
   @override
   void initState() {
@@ -50,6 +55,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
     });
     _sampleSub = _source.signals
         .listen((SensingSample s) => setState(() => _lastSample = s));
+    _rawSub = _source.rawEstimates.listen((RppgEstimate e) => setState(() {
+          _lastRawEstimate = e;
+          _rawEstimateCount++;
+        }));
     unawaited(_start());
   }
 
@@ -70,6 +79,7 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
   void dispose() {
     unawaited(_analysisSub?.cancel());
     unawaited(_sampleSub?.cancel());
+    unawaited(_rawSub?.cancel());
     _source.dispose();
     super.dispose();
   }
@@ -101,6 +111,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                               CustomPaint(
                                 painter: _LandmarkPainter(analysis: a),
                               ),
+                            if (a != null && a.faceDetected)
+                              CustomPaint(
+                                painter: _RoiPainter(faceLandmarks: a.faceLandmarks),
+                              ),
                           ],
                         ),
                       ),
@@ -118,14 +132,23 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                       ),
                     ),
                     ListTile(
-                      title: const Text('Metriche derivate (EMA)'),
+                      title: const Text('Metriche derivate'),
                       subtitle: Text(
                         s == null
                             ? 'nessun campione ancora'
                             : 'tensione: ${s.facialTension.toStringAsFixed(2)} '
                                 '· postura: ${s.postureScore.toStringAsFixed(2)}\n'
-                                'hr: ${s.hr?.toStringAsFixed(1) ?? '— (Fase 3)'} '
-                                '· quality: ${s.hrQuality.toStringAsFixed(2)}',
+                                'hr: ${s.hr?.toStringAsFixed(1) ?? (s.hrQuality > 0 ? 'segnale instabile' : 'in attesa')} '
+                                'bpm · quality: ${s.hrQuality.toStringAsFixed(2)}',
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('rPPG grezzo (diagnostica, non gated)'),
+                      subtitle: Text(
+                        'frame ROI inviati: ${_source.rppgFramesSent} · '
+                        'ultimo pixelCount: ${_source.lastRoiPixelCount}\n'
+                        'stime ricevute: $_rawEstimateCount\n'
+                        '${_lastRawEstimate == null ? 'bpm: — (nessuna stima)' : 'bpm calcolato: ${_lastRawEstimate!.hrBpm.toStringAsFixed(1)} · quality: ${_lastRawEstimate!.quality.toStringAsFixed(3)} (soglia ${RppgConfig.qualityThreshold})'}',
                       ),
                     ),
                     if (a != null && a.blendshapes.isNotEmpty)
@@ -184,4 +207,54 @@ class _LandmarkPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LandmarkPainter oldDelegate) =>
       oldDelegate.analysis != analysis;
+}
+
+/// Disegna i poligoni ROI (fronte + guance) usati dal CHROM, per verifica
+/// visiva durante la validazione manuale (§5 del design doc Fase 3).
+///
+/// I landmark arrivano già in spazio upright (MediaPipe li ruota via
+/// rotationDegrees in Fase 2), quindi qui basta lo specchiamento x
+/// `(1 - x)` sopra la `CameraPreview` — stessa convenzione di
+/// [_LandmarkPainter]. `RoiExtractor.meansForRoi` campiona lo STESSO volto
+/// ma nel buffer YUV grezzo (non ruotato), perciò de-ruota gli stessi
+/// landmark con `rawNormalizedFromUpright`: overlay ed estrazione
+/// indicano la medesima regione, ciascuno nel proprio spazio di coordinate.
+class _RoiPainter extends CustomPainter {
+  _RoiPainter({required this.faceLandmarks});
+
+  final List<double> faceLandmarks;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint fill = Paint()
+      ..color = AppColors.stressLow.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    for (final List<int> indices in <List<int>>[
+      RppgConfig.foreheadIndices,
+      RppgConfig.leftCheekIndices,
+      RppgConfig.rightCheekIndices,
+    ]) {
+      final Path path = Path();
+      for (int i = 0; i < indices.length; i++) {
+        final int xi = indices[i] * 2;
+        if (xi + 1 >= faceLandmarks.length) {
+          return;
+        }
+        final double x = (1 - faceLandmarks[xi]) * size.width;
+        final double y = faceLandmarks[xi + 1] * size.height;
+        if (i == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      path.close();
+      canvas.drawPath(path, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RoiPainter oldDelegate) =>
+      oldDelegate.faceLandmarks != faceLandmarks;
 }

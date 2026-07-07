@@ -474,29 +474,38 @@ import 'package:mindbridge/sensing/rppg/chrom.dart';
 import 'package:mindbridge/sensing/rppg/rppg_config.dart';
 
 /// Genera una finestra sintetica di campioni RGB con una modulazione
-/// sinusoidale a [freqHz] sovrapposta a un colore pelle plausibile,
-/// coerente con le proporzioni di crominanza usate dal CHROM (R più
-/// modulato di G, G più di B — come il segnale di volume ematico reale).
+/// sinusoidale a [freqHz] sovrapposta a un colore pelle plausibile.
+///
+/// Le ampiezze per canale decrescono R>G>B (come il volume ematico reale),
+/// ma soprattutto ogni canale ha uno sfasamento diverso ([phaseG], [phaseB]):
+/// senza questo il segnale sarebbe una singola sinusoide identica su tutti i
+/// canali, che la combinazione di crominanza del CHROM (Xs-alpha*Ys) annulla
+/// per costruzione (alpha=std(Xs)/std(Ys)). Lo sfasamento — fisicamente reale,
+/// il fronte d'onda del polso raggiunge i canali con timing diverso — rende
+/// Xs e Ys non proporzionali, così la fondamentale sopravvive ed è
+/// recuperabile. Il rumore, se presente, è indipendente per canale.
 List<ChromSample> syntheticPulse({
   required double freqHz,
   double amplitude = 2.0,
   double noiseAmplitude = 0,
   int sampleCount = 300,
   double fps = 30,
+  double phaseG = 0.6,
+  double phaseB = 1.2,
   math.Random? random,
 }) {
   final math.Random rnd = random ?? math.Random(42);
+  double noise() =>
+      noiseAmplitude == 0 ? 0 : (rnd.nextDouble() * 2 - 1) * noiseAmplitude;
   return <ChromSample>[
     for (int i = 0; i < sampleCount; i++)
       () {
         final double t = i / fps;
-        final double pulse = math.sin(2 * math.pi * freqHz * t);
-        final double noise =
-            noiseAmplitude == 0 ? 0 : (rnd.nextDouble() * 2 - 1) * noiseAmplitude;
+        final double w = 2 * math.pi * freqHz;
         return ChromSample(
-          r: 128 + amplitude * pulse + noise,
-          g: 128 + 0.6 * amplitude * pulse + noise,
-          b: 128 + 0.3 * amplitude * pulse + noise,
+          r: 128 + amplitude * math.sin(w * t) + noise(),
+          g: 128 + 0.6 * amplitude * math.sin(w * t - phaseG) + noise(),
+          b: 128 + 0.3 * amplitude * math.sin(w * t - phaseB) + noise(),
           timestampMs: (t * 1000).round(),
         );
       }(),
@@ -510,7 +519,12 @@ void main() {
           estimateHeartRate(syntheticPulse(freqHz: 1.2));
       expect(result, isNotNull);
       expect(result!.hrBpm, closeTo(72, 5));
-      expect(result.quality, greaterThan(0.6));
+      // La griglia di scan (0.05 Hz) è più fitta della risoluzione di
+      // Rayleigh della finestra (0.1 Hz): la potenza di un tono puro si
+      // distribuisce sui bin adiacenti, quindi la purezza spettrale satura
+      // intorno a 0.5. L'invariante che conta: un segnale pulito supera
+      // comodamente la soglia di affidabilità dell'app.
+      expect(result.quality, greaterThan(RppgConfig.qualityThreshold));
     });
 
     test('clean 2.0 Hz pulse resolves to ~120 bpm', () {
@@ -721,8 +735,17 @@ void main() {
       RppgEstimate? first;
       for (int i = 0; i < 300; i++) {
         final int tMs = (i / fps * 1000).round();
-        final double pulse = math.sin(2 * math.pi * 1.2 * (tMs / 1000));
-        window.add(128 + 2 * pulse, 128 + 1.2 * pulse, 128 + 0.6 * pulse, tMs);
+        final double t = tMs / 1000;
+        const double w = 2 * math.pi * 1.2;
+        // Sfasamento per canale: senza, la singola sinusoide in fase su
+        // R/G/B si annulla sotto CHROM (Xs e Ys proporzionali) e la stima
+        // non è recuperabile — stesso motivo del fixture di Task 2.
+        window.add(
+          128 + 2 * math.sin(w * t),
+          128 + 1.2 * math.sin(w * t - 0.6),
+          128 + 0.6 * math.sin(w * t - 1.2),
+          tMs,
+        );
         final RppgEstimate? estimate = window.maybeEstimate(tMs);
         if (estimate != null && first == null) {
           first = estimate;
@@ -867,11 +890,15 @@ void main() {
     const double fps = 30;
     for (int i = 0; i < 300; i++) {
       final int tMs = (i / fps * 1000).round();
-      final double pulse = math.sin(2 * math.pi * 1.2 * (tMs / 1000));
+      final double t = tMs / 1000;
+      const double w = 2 * math.pi * 1.2;
+      // Sfasamento per canale: una singola sinusoide in fase su R/G/B si
+      // annulla sotto CHROM (Xs e Ys proporzionali). Lo sfasamento rende il
+      // polso recuperabile — coerente con i fixture di Task 2/3.
       processor.addFrame(
-        r: 128 + 2 * pulse,
-        g: 128 + 1.2 * pulse,
-        b: 128 + 0.6 * pulse,
+        r: 128 + 2 * math.sin(w * t),
+        g: 128 + 1.2 * math.sin(w * t - 0.6),
+        b: 128 + 0.6 * math.sin(w * t - 1.2),
         timestampMs: tMs,
       );
     }
