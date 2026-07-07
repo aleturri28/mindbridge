@@ -1,5 +1,25 @@
 # Decisioni di progetto
 
+## Fase 3 — Esito validazione manuale (Task 7) e gate di affidabilità
+
+- **DoD raggiunto:** su device Android, buona luce, volto fermo, l'HR mostrato
+  è entro ~±10 bpm dal riferimento (smartwatch/polso). Percorso che ci ha
+  portati lì, in ordine: POS al posto di CHROM (accuratezza), risoluzione
+  `low → medium` (SNR), e — decisivo — gate di affidabilità temporale.
+- **Il gate non usa più la purezza spettrale come soglia primaria.** Quella
+  metrica satura ~0.5 anche su un tono pulito (griglia di scan sovracampionata
+  vs risoluzione di Rayleigh), quindi la soglia 0.35 scartava segnali reali
+  validi (bpm corretto, quality 0.10–0.30). Ora l'HR è mostrato solo se ≥3
+  stime recenti (entro 5s) concordano — almeno altrettante entro 8 bpm dalla
+  loro mediana — e si mostra **la mediana** (robusta ai picchi occasionali).
+  Rumore/movimento → stime sparpagliate → non affidabile → hr nascosto. È la
+  degradazione onesta del DoD, e regge meglio del numero istantaneo di purezza.
+- **`qualityThreshold` declassata a pavimento anti-rumore (0.12):** scarta solo
+  le stime da rumore puro (~0.09) prima che entrino nello storico di consistenza.
+- **Strumenti di diagnostica lasciati nella debug screen** (tile «rPPG grezzo»
+  con bpm/quality non gated + contatori frame/stime): utili per future
+  rivalidazioni, dentro l'eccezione NFR10 delle schermate di debug.
+
 ## Fase 3 (seguito) — Passaggio a POS come algoritmo attivo
 
 - **POS (Wang et al. 2017) sostituisce CHROM nella pipeline attiva**
