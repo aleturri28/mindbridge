@@ -31,6 +31,7 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
   DateTime? _lastFrameTime;
   double _fps = 0;
   RppgEstimate? _lastRawEstimate;
+  int _rawEstimateCount = 0;
   StreamSubscription<FrameAnalysis>? _analysisSub;
   StreamSubscription<SensingSample>? _sampleSub;
   StreamSubscription<RppgEstimate>? _rawSub;
@@ -54,8 +55,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
     });
     _sampleSub = _source.signals
         .listen((SensingSample s) => setState(() => _lastSample = s));
-    _rawSub = _source.rawEstimates
-        .listen((RppgEstimate e) => setState(() => _lastRawEstimate = e));
+    _rawSub = _source.rawEstimates.listen((RppgEstimate e) => setState(() {
+          _lastRawEstimate = e;
+          _rawEstimateCount++;
+        }));
     unawaited(_start());
   }
 
@@ -142,13 +145,10 @@ class _SensingDebugScreenState extends State<SensingDebugScreen> {
                     ListTile(
                       title: const Text('rPPG grezzo (diagnostica, non gated)'),
                       subtitle: Text(
-                        _lastRawEstimate == null
-                            ? 'nessuna stima ancora (serve ~10s di finestra)'
-                            : 'bpm calcolato: '
-                                '${_lastRawEstimate!.hrBpm.toStringAsFixed(1)}\n'
-                                'quality: '
-                                '${_lastRawEstimate!.quality.toStringAsFixed(3)} '
-                                '(soglia ${RppgConfig.qualityThreshold})',
+                        'frame ROI inviati: ${_source.rppgFramesSent} · '
+                        'ultimo pixelCount: ${_source.lastRoiPixelCount}\n'
+                        'stime ricevute: $_rawEstimateCount\n'
+                        '${_lastRawEstimate == null ? 'bpm: — (nessuna stima)' : 'bpm calcolato: ${_lastRawEstimate!.hrBpm.toStringAsFixed(1)} · quality: ${_lastRawEstimate!.quality.toStringAsFixed(3)} (soglia ${RppgConfig.qualityThreshold})'}',
                       ),
                     ),
                     if (a != null && a.blendshapes.isNotEmpty)

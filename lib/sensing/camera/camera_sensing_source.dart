@@ -114,6 +114,19 @@ class CameraSensingSource implements SensingSource {
   /// ignorato invece di continuare a campionare una ROI ormai non valida.
   DateTime? _lastFaceSeenAt;
 
+  /// Diagnostica (debug screen): conteggio frame ROI inviati all'isolate e
+  /// ultimo pixelCount della ROI. Servono a localizzare uno stallo della
+  /// pipeline durante la validazione manuale (nessun impatto sul flusso).
+  int _rppgFramesSent = 0;
+  int _lastPixelCount = -1;
+
+  /// Frame ROI (con pixelCount>0) inoltrati finora all'isolate rPPG.
+  int get rppgFramesSent => _rppgFramesSent;
+
+  /// pixelCount dell'ultima estrazione ROI tentata (-1 = mai tentata,
+  /// 0 = ROI vuota/fuori frame).
+  int get lastRoiPixelCount => _lastPixelCount;
+
   @override
   Stream<SensingSample> get signals => _samples.stream;
 
@@ -205,9 +218,11 @@ class CameraSensingSource implements SensingSource {
       faceLandmarksFlat: _lastFaceLandmarks,
       rotationDegrees: _sensorOrientation,
     );
+    _lastPixelCount = means.pixelCount;
     if (means.pixelCount == 0) {
       return;
     }
+    _rppgFramesSent++;
     processor.addFrame(
       r: means.r,
       g: means.g,
@@ -259,6 +274,8 @@ class CameraSensingSource implements SensingSource {
     _rppgProcessor = null;
     _lastFaceLandmarks = const <double>[];
     _lastFaceSeenAt = null;
+    _rppgFramesSent = 0;
+    _lastPixelCount = -1;
     final CameraController? controller = _controller;
     _controller = null;
     if (controller != null) {
