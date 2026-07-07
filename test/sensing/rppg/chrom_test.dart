@@ -23,6 +23,8 @@ List<ChromSample> syntheticPulse({
   double fps = 30,
   double phaseG = 0.6,
   double phaseB = 1.2,
+  double driftAmplitude = 0,
+  double driftHz = 0.15,
   math.Random? random,
 }) {
   final math.Random rnd = random ?? math.Random(42);
@@ -33,10 +35,15 @@ List<ChromSample> syntheticPulse({
       () {
         final double t = i / fps;
         final double w = 2 * math.pi * freqHz;
+        // Deriva common-mode (illuminazione/movimento lento): uguale su
+        // R/G/B, sotto la banda HR. Senza detrend gonfia std(Xs)/std(Ys) e
+        // corrompe alpha, seppellendo il polso.
+        final double drift =
+            driftAmplitude * math.sin(2 * math.pi * driftHz * t);
         return ChromSample(
-          r: 128 + amplitude * math.sin(w * t) + noise(),
-          g: 128 + 0.6 * amplitude * math.sin(w * t - phaseG) + noise(),
-          b: 128 + 0.3 * amplitude * math.sin(w * t - phaseB) + noise(),
+          r: 128 + amplitude * math.sin(w * t) + drift + noise(),
+          g: 128 + 0.6 * amplitude * math.sin(w * t - phaseG) + drift + noise(),
+          b: 128 + 0.3 * amplitude * math.sin(w * t - phaseB) + drift + noise(),
           timestampMs: (t * 1000).round(),
         );
       }(),
@@ -64,6 +71,22 @@ void main() {
           estimateHeartRate(syntheticPulse(freqHz: 2.0));
       expect(result, isNotNull);
       expect(result!.hrBpm, closeTo(120, 6));
+    });
+
+    test('common-mode drift is rejected by the CHROM combination', () {
+      // Deriva lenta forte (ampiezza 6, 3x il polso) uguale su R/G/B: CHROM
+      // la cancella per costruzione nella sottrazione Xs-alpha*Ys (alpha≈1
+      // quando la deriva domina entrambi). Guardia di regressione: la
+      // reiezione common-mode deve reggere anche con un po' di rumore.
+      final ChromResult? result = estimateHeartRate(syntheticPulse(
+        freqHz: 1.2,
+        amplitude: 2,
+        driftAmplitude: 6,
+        noiseAmplitude: 0.5,
+      ));
+      expect(result, isNotNull);
+      expect(result!.hrBpm, closeTo(72, 6));
+      expect(result.quality, greaterThan(RppgConfig.qualityThreshold));
     });
 
     test('pure noise (no pulse) yields low quality', () {
