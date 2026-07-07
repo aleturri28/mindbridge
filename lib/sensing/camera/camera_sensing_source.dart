@@ -69,12 +69,18 @@ class VisualSampleAggregator {
         for (final ({double bpm, double quality, DateTime at}) e in _recentHr)
           e.bpm,
       ]..sort();
+      // Mediana "superiore" per liste di lunghezza pari (elemento in
+      // bpms.length ~/ 2): sempre una stima realmente osservata, mai un valore
+      // interpolato tra due. NON sostituire con (a+b)/2: cambierebbe quale bpm
+      // reale l'HR riporta e il comportamento del gate su cluster bimodali.
       final double median = bpms[bpms.length ~/ 2];
       final int inliers = bpms
           .where((double b) => (b - median).abs() <= RppgConfig.maxHrSpreadBpm)
           .length;
       if (inliers >= RppgConfig.minConsistentEstimates) {
         hr = median;
+        // Qualità dell'ultima stima come proxy di freschezza (l'utente non
+        // vede questo numero — NFR10; serve come peso al classifier in Fase 4).
         hrQuality = _recentHr.last.quality;
       }
     }

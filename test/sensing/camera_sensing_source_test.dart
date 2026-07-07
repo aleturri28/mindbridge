@@ -137,5 +137,20 @@ void main() {
       expect(s.hr, isNull);
       expect(s.hrQuality, 0);
     });
+
+    test('partial prune: only fresh estimates survive the window boundary', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      // Due stime vecchie + una fresca. Valutando poco dopo la fresca, le due
+      // vecchie escono dalla finestra e resta 1 sola stima (< 3) → hr null.
+      agg.updateHr(est(71), now: base);
+      agg.updateHr(est(72), now: base.add(const Duration(seconds: 1)));
+      final DateTime freshAt = base
+          .add(RppgConfig.hrConsistencyWindow)
+          .add(const Duration(seconds: 2));
+      agg.updateHr(est(73), now: freshAt);
+      final SensingSample s = agg.snapshot(freshAt);
+      expect(s.hr, isNull);
+      expect(s.hrQuality, 0);
+    });
   });
 }
