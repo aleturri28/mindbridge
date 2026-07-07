@@ -24,9 +24,25 @@ abstract final class RppgConfig {
   /// Risoluzione della scansione in frequenza (Hz).
   static const double frequencyStepHz = 0.05;
 
-  /// Sotto questa purezza spettrale (potenza del picco / potenza totale in
-  /// banda) l'HR non è affidabile: mai mostrarlo come numero (NFR3/NFR10).
-  static const double qualityThreshold = 0.35;
+  /// Soglia minima di purezza spettrale, usata solo come pavimento anti-rumore
+  /// (il rumore puro sta ~0.09). L'affidabilità primaria dell'HR viene dalla
+  /// consistenza temporale (vedi [hrConsistencyWindow]/[maxHrSpreadBpm]), non
+  /// da questo scalare: con la griglia di scan sovracampionata anche un tono
+  /// pulito satura ~0.5, quindi una soglia alta scarterebbe segnali validi.
+  static const double qualityThreshold = 0.12;
+
+  /// Finestra su cui valutare la consistenza delle stime HR recenti.
+  static const Duration hrConsistencyWindow = Duration(seconds: 5);
+
+  /// Stime HR recenti minime (entro [hrConsistencyWindow]) per giudicare
+  /// l'affidabilità: sotto questo numero l'HR resta nascosto.
+  static const int minConsistentEstimates = 3;
+
+  /// Spread massimo (max−min, bpm) tra le stime recenti perché l'HR sia
+  /// affidabile. Stime concordi = polso reale; stime sparpagliate (rumore,
+  /// movimento) = non affidabile → hr nascosto. Ciò che conta davvero per la
+  /// degradazione onesta, più della purezza spettrale istantanea.
+  static const double maxHrSpreadBpm = 8;
 
   /// Campioni minimi in finestra prima di tentare una stima.
   static const int minSamplesForEstimate = 30;

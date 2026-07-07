@@ -68,64 +68,74 @@ void main() {
   });
 
   group('VisualSampleAggregator.updateHr', () {
-    test('quality at or above threshold surfaces hr', () {
-      final VisualSampleAggregator agg = VisualSampleAggregator();
-      agg.updateHr(const RppgEstimate(
-        hrBpm: 72,
-        quality: RppgConfig.qualityThreshold + 0.1,
-        timestampMs: 0,
-      ));
-      final SensingSample s = agg.snapshot(DateTime(2026));
-      expect(s.hr, 72);
-      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold + 0.1, 1e-9));
-    });
+    final DateTime base = DateTime(2026);
 
-    test('quality below threshold hides hr but still reports quality', () {
-      final VisualSampleAggregator agg = VisualSampleAggregator();
-      agg.updateHr(const RppgEstimate(
-        hrBpm: 72,
-        quality: RppgConfig.qualityThreshold - 0.1,
-        timestampMs: 0,
-      ));
-      final SensingSample s = agg.snapshot(DateTime(2026));
-      expect(s.hr, isNull);
-      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold - 0.1, 1e-9));
-    });
+    RppgEstimate est(double bpm, {double quality = 0.2}) =>
+        RppgEstimate(hrBpm: bpm, quality: quality, timestampMs: 0);
 
-    test('stale estimate is expired: hr forced null, quality forced 0', () {
+    test('a single estimate is not enough to surface hr', () {
       final VisualSampleAggregator agg = VisualSampleAggregator();
-      final DateTime receivedAt = DateTime(2026);
-      agg.updateHr(
-        const RppgEstimate(
-          hrBpm: 72,
-          quality: RppgConfig.qualityThreshold + 0.1,
-          timestampMs: 0,
-        ),
-        now: receivedAt,
-      );
-      final DateTime staleNow =
-          receivedAt.add(RppgConfig.estimateStaleAfter + const Duration(seconds: 1));
-      final SensingSample s = agg.snapshot(staleNow);
+      agg.updateHr(est(72), now: base);
+      final SensingSample s = agg.snapshot(base);
       expect(s.hr, isNull);
       expect(s.hrQuality, 0);
     });
 
-    test('fresh estimate within staleness window still surfaces hr', () {
+    test('enough consistent estimates surface the median hr', () {
       final VisualSampleAggregator agg = VisualSampleAggregator();
-      final DateTime receivedAt = DateTime(2026);
-      agg.updateHr(
-        const RppgEstimate(
-          hrBpm: 72,
-          quality: RppgConfig.qualityThreshold + 0.1,
-          timestampMs: 0,
-        ),
-        now: receivedAt,
-      );
-      final DateTime freshNow =
-          receivedAt.add(RppgConfig.estimateStaleAfter - const Duration(seconds: 1));
-      final SensingSample s = agg.snapshot(freshNow);
-      expect(s.hr, 72);
-      expect(s.hrQuality, closeTo(RppgConfig.qualityThreshold + 0.1, 1e-9));
+      agg.updateHr(est(71), now: base);
+      agg.updateHr(est(72), now: base.add(const Duration(seconds: 1)));
+      agg.updateHr(est(73), now: base.add(const Duration(seconds: 2)));
+      final SensingSample s = agg.snapshot(base.add(const Duration(seconds: 2)));
+      expect(s.hr, 72); // mediana di 71,72,73
+      expect(s.hrQuality, closeTo(0.2, 1e-9));
+    });
+
+    test('a single spike is ignored when enough estimates cluster', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      const List<double> bpms = <double>[70, 71, 72, 73, 150];
+      for (int i = 0; i < bpms.length; i++) {
+        agg.updateHr(est(bpms[i]), now: base.add(Duration(seconds: i)));
+      }
+      final SensingSample s = agg.snapshot(base.add(const Duration(seconds: 4)));
+      expect(s.hr, 72); // mediana robusta; il picco 150 è un outlier
+    });
+
+    test('scattered estimates (noise) keep hr null', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      const List<double> bpms = <double>[50, 90, 130, 75, 160];
+      for (int i = 0; i < bpms.length; i++) {
+        agg.updateHr(est(bpms[i]), now: base.add(Duration(seconds: i)));
+      }
+      final SensingSample s = agg.snapshot(base.add(const Duration(seconds: 4)));
+      expect(s.hr, isNull);
+      expect(s.hrQuality, 0);
+    });
+
+    test('estimates below the anti-noise floor are ignored', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      for (int i = 0; i < 3; i++) {
+        agg.updateHr(
+          est(72, quality: RppgConfig.qualityThreshold - 0.01),
+          now: base.add(Duration(seconds: i)),
+        );
+      }
+      final SensingSample s = agg.snapshot(base.add(const Duration(seconds: 2)));
+      expect(s.hr, isNull);
+    });
+
+    test('estimates outside the consistency window are dropped', () {
+      final VisualSampleAggregator agg = VisualSampleAggregator();
+      agg.updateHr(est(71), now: base);
+      agg.updateHr(est(72), now: base.add(const Duration(seconds: 1)));
+      agg.updateHr(est(73), now: base.add(const Duration(seconds: 2)));
+      // Molto oltre la finestra di consistenza: le stime recenti sono scadute.
+      final DateTime late = base
+          .add(RppgConfig.hrConsistencyWindow)
+          .add(const Duration(seconds: 10));
+      final SensingSample s = agg.snapshot(late);
+      expect(s.hr, isNull);
+      expect(s.hrQuality, 0);
     });
   });
 }

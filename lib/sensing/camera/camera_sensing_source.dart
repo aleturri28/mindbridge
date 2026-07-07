@@ -22,9 +22,12 @@ class VisualSampleAggregator {
 
   double _tension = VisualMetricsConfig.restTension;
   double _posture = VisualMetricsConfig.restPosture;
-  double? _hr;
-  double _hrQuality = 0;
-  DateTime? _hrReceivedAt;
+
+  /// Stime HR recenti (bpm, qualità, istante) sopra il pavimento anti-rumore,
+  /// entro [RppgConfig.hrConsistencyWindow]. L'affidabilità dell'HR nasce dal
+  /// loro accordo, non da una singola purezza spettrale.
+  final List<({double bpm, double quality, DateTime at})> _recentHr =
+      <({double bpm, double quality, DateTime at})>[];
 
   void add(FrameAnalysis analysis) {
     final double tension = facialTensionFromBlendshapes(analysis.blendshapes);
@@ -33,31 +36,52 @@ class VisualSampleAggregator {
     _posture = _ema(_posture, posture);
   }
 
-  /// Aggiorna l'HR dall'ultima stima CHROM. Sotto soglia di qualità l'HR
-  /// resta nascosto (mai inventare un valore — NFR3/NFR10), ma la qualità
-  /// vera viene comunque riportata così la debug screen mostra il degrado
-  /// onestamente. [now] è iniettabile per i test; di default l'orario reale.
+  /// Registra l'ultima stima rPPG. Le stime sotto [RppgConfig.qualityThreshold]
+  /// (pavimento anti-rumore) vengono ignorate; le altre entrano nello storico
+  /// recente, che [snapshot] valuta per consistenza. [now] è iniettabile nei
+  /// test; di default l'orario reale.
   void updateHr(RppgEstimate estimate, {DateTime? now}) {
-    _hrQuality = estimate.quality;
-    _hr = estimate.quality >= RppgConfig.qualityThreshold ? estimate.hrBpm : null;
-    _hrReceivedAt = now ?? DateTime.now();
+    if (estimate.quality < RppgConfig.qualityThreshold) {
+      return;
+    }
+    final DateTime at = now ?? DateTime.now();
+    _recentHr.add((bpm: estimate.hrBpm, quality: estimate.quality, at: at));
   }
 
   double _ema(double previous, double next) =>
       previous + alpha * (next - previous);
 
-  /// Campione corrente. hr/hrQuality restano vuoti finché l'rPPG non
-  /// arriva (Fase 3): mai inventare valori (NFR3). Se non è mai arrivata
-  /// una stima, o l'ultima è più vecchia di [RppgConfig.estimateStaleAfter]
-  /// (volto perso o isolate bloccato), l'HR viene forzato a nascosto e la
-  /// qualità a 0: mai riportare come "corrente" un valore ormai stale.
+  /// Campione corrente. L'HR è mostrato solo se affidabile: servono almeno
+  /// [RppgConfig.minConsistentEstimates] stime recenti (entro
+  /// [RppgConfig.hrConsistencyWindow]) che concordano — cioè almeno altrettante
+  /// entro [RppgConfig.maxHrSpreadBpm] dalla loro mediana. In tal caso hr = la
+  /// mediana (robusta ai picchi occasionali); altrimenti hr null e quality 0.
+  /// Rumore e movimento producono stime sparpagliate → non affidabili → hr
+  /// nascosto: degradazione onesta, mai un valore inventato (NFR3/NFR10).
   SensingSample snapshot(DateTime now) {
-    final DateTime? receivedAt = _hrReceivedAt;
-    final bool stale = receivedAt == null ||
-        now.difference(receivedAt) > RppgConfig.estimateStaleAfter;
+    _recentHr.removeWhere((({double bpm, double quality, DateTime at}) e) =>
+        now.difference(e.at) > RppgConfig.hrConsistencyWindow);
+
+    double? hr;
+    double hrQuality = 0;
+    if (_recentHr.length >= RppgConfig.minConsistentEstimates) {
+      final List<double> bpms = <double>[
+        for (final ({double bpm, double quality, DateTime at}) e in _recentHr)
+          e.bpm,
+      ]..sort();
+      final double median = bpms[bpms.length ~/ 2];
+      final int inliers = bpms
+          .where((double b) => (b - median).abs() <= RppgConfig.maxHrSpreadBpm)
+          .length;
+      if (inliers >= RppgConfig.minConsistentEstimates) {
+        hr = median;
+        hrQuality = _recentHr.last.quality;
+      }
+    }
+
     return SensingSample(
-      hr: stale ? null : _hr,
-      hrQuality: stale ? 0 : _hrQuality,
+      hr: hr,
+      hrQuality: hrQuality,
       facialTension: _tension,
       postureScore: _posture,
       timestamp: now,
